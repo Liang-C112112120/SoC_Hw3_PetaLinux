@@ -39,7 +39,10 @@ Command 設為 sleep infinity（防止容器離線）。
 看到類型下拉選單（原本是 Volume），把它改成 Bind。  
 切換成 Bind 後，原本的下拉選單會變成可輸入文字的欄位  
 Container：/workspace  
-Host：輸入本機路徑（/home/你的帳號/petalinux_work）  
+Host：輸入本機路徑（/home/你的帳號/petalinux_work）
+
+開啟 Console：  
+勾選 Interactive & TTY (-i -t)（在 Console 區塊中），然後點擊 Deploy the container。  
 
 ### 2. 檔案準備：  
 將 petalinux-v2018.3-final-installer.run 與 Vivado 匯出的 .hdf 放入掛載資料夾 "/home/你的帳號/petalinux_work"。
