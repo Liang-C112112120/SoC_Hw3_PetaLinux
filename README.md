@@ -12,7 +12,7 @@ Intel Core i5-6500、DDR4 16GB RAM、120GB SATA SSD
 ## 階段一：Vivado 2018.3 硬體設計與設定要點
 ### 1. ZYNQ IP 核基本設定：
 
-Enable PS UART 1、SD 0、Ethernet 0 (RGMII)。  
+Enable PS 端的 UART 1、SD 0、Ethernet 0 (RGMII)，記得 Ethernet 0 下拉選單把 MDIO 勾選，到右邊方塊圖點選 MDIO 對應的 52、53。  
 I/O 電壓設定：將 Bank 1 (RGMII/Ethernet 專用) 設定為 1.8V。
 
 時脈與匯流排依賴陷阱：  
