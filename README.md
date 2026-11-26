@@ -1,5 +1,7 @@
 # EGO-XZ7 (ZYNQ-7020) PetaLinux 2018.3 建置與打包
 
+Demo影片：https://drive.google.com/file/d/1cXWoMSiuZfFyhBrbIf7ZA_nGF_4qaOvH/view?usp=drive_link
+
 自有一台 Ubuntu 伺服器，系統為 Ubuntu Server 26.04 LTS，並使用 Portainer 管理容器。  
 由於 PetaLinux 2018.3 適合在 Ubuntu 18.04 環境下運作，所以用 Portainer 新增一個 Ubuntu 18.04 容器，在裡面建立專案並編譯開機檔。  
 
