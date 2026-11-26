@@ -12,7 +12,7 @@ Intel Core i5-6500、DDR4 16GB RAM、120GB SATA SSD
 ## 階段一：Vivado 2018.3 硬體設計與設定要點
 ### 1. ZYNQ IP 核基本設定：
 
-Enable PS 端的 UART 1、SD 0、Ethernet 0 (RGMII)，記得 Ethernet 0 下拉選單把 MDIO 勾選，到右邊方塊圖點選 MDIO 對應的 52、53。  
+Enable PS 端的 UART 1、SD 0、Ethernet 0 (RGMII)，記得 Ethernet 0 下拉選單勾選 MDIO 並確認右側 MIO 分配到 52、53。
 I/O 電壓設定：將 Bank 1 (RGMII/Ethernet 專用) 設定為 1.8V。
 
 時脈與匯流排依賴陷阱：  
@@ -51,44 +51,51 @@ Host：輸入本機路徑（/home/你的帳號/petalinux_work）
 ### 所有指令在容器內執行：
 
 ### 1. 修正舊版 Ubuntu 18.04 套件庫 (若 apt-get 404 時執行)
+```
 sed -i 's|http://archive.ubuntu.com/ubuntu|http://old-releases.ubuntu.com/ubuntu|g; s|http://security.ubuntu.com/ubuntu|http://old-releases.ubuntu.com/ubuntu|g' /etc/apt/sources.list
+```
 
 ### 2. 安裝 32 位元與 PetaLinux 依賴套件 (root 權限)
-dpkg --add-architecture i386
+```dpkg --add-architecture i386
 apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
   tofrodos iproute2 gawk xvfb git make net-tools libncurses5-dev \
   tftpd zlib1g-dev libssl-dev flex bison libselinux1 gnupg wget \
   diffstat chrpath socat xterm autoconf libtool tar unzip texinfo \
   zlib1g-dev:i386 gcc-multilib build-essential libsdl1.2-dev libglib2.0-dev \
   screen pax gzip cpio rsync python python3 locales
+```
 
 ### 3. 強制生成 en_US.UTF-8 locale 與修正 /bin/sh (關鍵避坑點)
-sed -i 's/^# *en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
+```sed -i 's/^# *en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
 locale-gen
 update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
 ln -sf /bin/bash /bin/sh
+```
 
 ### 4. 建立普通使用者 puser 並設定權限
-useradd -m -s /bin/bash puser  
+```useradd -m -s /bin/bash puser  
 mkdir -p /opt/pkg/petalinux  
-chown -R puser:puser /opt/pkg/petalinux /workspace  
+chown -R puser:puser /opt/pkg/petalinux /workspace
+```
 
 ### 5. 切換至 puser 執行安裝
+```
 su - puser  
 export LC_ALL=en_US.UTF-8  
 export LANG=en_US.UTF-8  
 chmod +x /workspace/petalinux-v2018.3-final-installer.run  
 /workspace/petalinux-v2018.3-final-installer.run /opt/pkg/petalinux  
+```
 
 授權條款按 Enter 翻頁，按 q 離開並輸入 y 同意。若提示目錄非空輸入 y 覆蓋。
 
 ### 6. 修正 Yocto source/arm 路徑缺層問題 (關鍵除錯步驟)
 安裝器會將相關檔案直接解至 components/yocto/source/，但建置時會往 components/yocto/source/arm/ 尋找
-
+```
 ln -sfn /opt/pkg/petalinux/components/yocto/source /opt/pkg/petalinux/components/yocto/source/arm
 ls -la /opt/pkg/petalinux/components/yocto/source/arm/environment-setup-cortexa9hf-neon-xilinx-linux-gnueabi
 ls -la /opt/pkg/petalinux/components/yocto/source/arm/layers/core/oe-init-build-env  
-
+```
 備註：  
 複製訊息時勿按 Ctrl+C，否則會中斷解壓縮 installer。若中斷請先 rm -rf /opt/pkg/petalinux/* 再重跑。  
 PetaLinux 禁止以 root 身分執行安裝與建置，務必切換為 puser。  
@@ -96,32 +103,62 @@ PetaLinux 禁止以 root 身分執行安裝與建置，務必切換為 puser。
 
 ## 階段四：專案建立、套用 HW Description 與打包 Boot 檔案
 ### 1. 載入環境變數 (puser 身分)
-export LC_ALL=en_US.UTF-8  
+```export LC_ALL=en_US.UTF-8  
 export LANG=en_US.UTF-8  
 source /opt/pkg/petalinux/settings.sh  
-
+```
 若出現 WARNING: No tftp server found... 屬於無害提示，不影響本機打包與 SD 卡開機。
 
 ### 2. 建立 ZYNQ 專案並匯入 .hdf
-cd /workspace  
+```cd /workspace  
 petalinux-create --type project --template zynq --name ego_xz7_petalinux  
 cd /workspace/ego_xz7_petalinux  
 petalinux-config --get-hw-description=/workspace  
-
+```
 跳出 menuconfig 時，確認 AUTO Settings 無誤後直接 Exit -> Save (Yes)
 
+### 2.5 設定 Ethernet PHY (Marvell 88E1518) Device Tree 與編譯 DTB
+在 system-user.dtsi 中補齊 mdio 與 Marvell 88E1518 節點（若容器內無 nano 或 vi，可用 cat << 'EOF' 寫入）：
+```
+cat << 'EOF' > /workspace/ego_xz7_petalinux/project-spec/meta-user/recipes-bsp/device-tree/files/system-user.dtsi
+/include/ "system-conf.dtsi"
+/ {
+};
+
+&gem0 {
+    phy-handle = <&phy0>;
+    phy-mode = "rgmii-id";
+    status = "okay";
+
+    mdio {
+        #address-cells = <1>;
+        #size-cells = <0>;
+
+        phy0: ethernet-phy@0 {
+            compatible = "marvell,88e1510", "marvell,88e1518";
+            device_type = "ethernet-phy";
+            reg = <0>;
+        };
+    };
+};
+EOF
+```
+接著編譯 Device Tree：  
+```petalinux-build -c device-tree```
+
 ### 3. 完整編譯 Kernel / FSBL / U-Boot / Rootfs
-petalinux-build
+```petalinux-build```
 
 結尾出現 NOTE: Failed to copy built images to tftp dir: /tftpboot 屬正常現象，不影響產出檔；看到 [INFO] successfully built project 即完成。
 
 ### 4. 打包 SD 卡 Boot 檔案
-petalinux-package --boot --fsbl images/linux/zynq_fsbl.elf --fpga images/linux/system.bit --u-boot --force
+```petalinux-package --boot --fsbl images/linux/zynq_fsbl.elf --fpga images/linux/system.bit --u-boot --force```
 
 ### 5. 複製產出檔至掛載目錄 (方便取出至 SD 卡)
+```
 cp images/linux/BOOT.BIN /workspace/  
 cp images/linux/image.ub /workspace/  
-
+```
 SD 卡開機部署：  
 將 SD 卡格式化為 FAT32 格式，將 /workspace/BOOT.BIN 與 /workspace/image.ub 複製到 SD 卡根目錄，將 EGO-XZ7 開機 jumper/switch 切至 SD 模式，接上 UART（鮑率 115200）即可啟動 Linux。
 
