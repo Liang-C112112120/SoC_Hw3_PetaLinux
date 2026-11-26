@@ -12,10 +12,10 @@ Intel Core i5-6500、DDR4 16GB RAM、120GB SATA SSD
 左側是 SFTP 檔案管理介面，可直觀的建立目錄，不需要用 mkdir。
 
 ## 階段一：Vivado 2018.3 硬體設計與設定要點
-### 1. ZYNQ IP 核基本設定：
+### 1. ZYNQ IP Core 基本設定：
 
-Enable PS 端的 UART 1、SD 0、Ethernet 0 (RGMII)，記得 Ethernet 0 下拉選單勾選 MDIO 並確認右側 MIO 分配到 52、53。
-I/O 電壓設定：將 Bank 1 (RGMII/Ethernet 專用) 設定為 1.8V。
+PS 端周邊 IO 啟用：UART 1、SD 0、Ethernet 0 (RGMII)，記得 Ethernet 0 下拉選單勾選 MDIO 並確認右側 MIO 分配到 52、53。  
+I/O 電壓設定：將 Bank 1 (RGMII/Ethernet 專用) 設定為 1.8V。  
 
 時脈與匯流排依賴陷阱：  
 若 Block Design 啟用了 M_AXI_GP0 介面，必須將 FCLK_CLK0 繞線接回 M_AXI_GP0_ACLK。若懸空將導致 Vivado 報錯或 AXI 匯流排無法連線。
@@ -44,7 +44,7 @@ Container：/workspace
 Host：輸入本機路徑（/home/你的帳號/petalinux_work）
 
 開啟 Console：  
-勾選 Interactive & TTY (-i -t)（在 Console 區塊中），然後點擊 Deploy the container。  
+勾選 Interactive & TTY (-i -t)（在 Console 區塊中），然後按 Deploy the container。  
 
 ### 2. 檔案準備：  
 將 petalinux-v2018.3-final-installer.run 與 Vivado 匯出的 .hdf 放入掛載資料夾 "/home/你的帳號/petalinux_work"。
@@ -67,7 +67,7 @@ apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
   screen pax gzip cpio rsync python python3 locales
 ```
 
-### 3. 強制生成 en_US.UTF-8 locale 與修正 /bin/sh (關鍵避坑點)
+### 3. 強制生成 en_US.UTF-8 locale 與修正 /bin/sh (關鍵)
 ```sed -i 's/^# *en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
 locale-gen
 update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
@@ -89,9 +89,9 @@ chmod +x /workspace/petalinux-v2018.3-final-installer.run
 /workspace/petalinux-v2018.3-final-installer.run /opt/pkg/petalinux  
 ```
 
-授權條款按 Enter 翻頁，按 q 離開並輸入 y 同意。若提示目錄非空輸入 y 覆蓋。
+授權條款按 Enter 翻頁，按 q 離開並輸入 y 同意。
 
-### 6. 修正 Yocto source/arm 路徑缺層問題 (關鍵除錯步驟)
+### 6. 修正 Yocto source/arm 路徑缺層問題 (關鍵)
 安裝器會將相關檔案直接解至 components/yocto/source/，但建置時會往 components/yocto/source/arm/ 尋找
 ```
 ln -sfn /opt/pkg/petalinux/components/yocto/source /opt/pkg/petalinux/components/yocto/source/arm
@@ -198,16 +198,11 @@ Stage 1 (FSBL)：印出 Xilinx First Stage Boot Loader 資訊。
 
 Stage 2 (U-Boot)：印出 U-Boot 版本、DRAM 容量，並載入 image.ub。
 
-Stage 3 (Kernel)：終端機顯示 2 隻 Linux Tux 企鵝（代表 2 核心 Cortex-A9 載入完成），並輸出系統初始化 log。
+Stage 3 (Kernel)：輸出系統初始化 log。
 
 ## 階段四：系統登入與基本硬體驗證
 Linux 登入：
-
-帳號：root
-
-密碼：root
-
-初次登入可能要求更換密碼，依照提示輸入新密碼即可。
+帳號與密碼皆為 root。  
 
 系統驗證指令：
 
